@@ -16,9 +16,9 @@ use norte_code_protocol::catalog::{
 use norte_code_protocol::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use serde::{Deserialize, Serialize};
 
-const CATALOG_URL: &str = "https://models.dev/catalog.json?type=all";
+const CATALOG_URL: &str = "https://models.dev/api.json?type=all";
 const CACHE_TTL: Duration = Duration::from_secs(15 * 60);
-const CACHE_FILE: &str = "models-dev-catalog.json";
+const CACHE_FILE: &str = "models-dev-api-catalog.json";
 
 /// SDK packages supported by Norte Code.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq, Serialize)]
@@ -107,7 +107,7 @@ fn catalogue(source: ModelsDevCatalog) -> Catalogue {
     let mut providers = BTreeMap::new();
     let mut models = Vec::new();
 
-    for (provider_id, source_provider) in source.providers {
+    for (provider_id, source_provider) in source {
         let Some(npm) = source_provider.npm.as_deref().and_then(parse_npm) else {
             continue;
         };
@@ -335,10 +335,11 @@ fn write_cache(path: &Path, fetched_at: u64, catalog: &ModelsDevCatalog) {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct ModelsDevCatalog {
-    providers: BTreeMap<String, ModelsDevProvider>,
-}
+/// The whole catalogue as served by `/api.json?type=all`.
+///
+/// The keys are provider ids (`oci`, `302ai`, ...) and each value carries
+/// that provider's models under `models`.
+type ModelsDevCatalog = BTreeMap<String, ModelsDevProvider>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct CachedCatalog {
@@ -425,19 +426,17 @@ mod tests {
     #[test]
     fn filters_and_namespaces_providers() {
         let source: ModelsDevCatalog = serde_json::from_value(serde_json::json!({
-            "providers": {
-                "deepinfra": {
-                    "name": "Deep Infra", "env": ["DEEPINFRA_API_KEY"],
-                    "npm": "@ai-sdk/deepinfra", "api": null, "models": {}
-                },
-                "acme": {
-                    "name": "Acme", "env": ["ACME_KEY"],
-                    "npm": "@ai-sdk/openai-compatible", "api": "https://acme/v1",
-                    "models": {"m": {
-                        "id": "m", "name": "Model", "reasoning": false,
-                        "open_weights": true, "limit": {"context": 1000, "output": 100}
-                    }}
-                }
+            "deepinfra": {
+                "name": "Deep Infra", "env": ["DEEPINFRA_API_KEY"],
+                "npm": "@ai-sdk/deepinfra", "api": null, "models": {}
+            },
+            "acme": {
+                "name": "Acme", "env": ["ACME_KEY"],
+                "npm": "@ai-sdk/openai-compatible", "api": "https://acme/v1",
+                "models": {"m": {
+                    "id": "m", "name": "Model", "reasoning": false,
+                    "open_weights": true, "limit": {"context": 1000, "output": 100}
+                }}
             }
         }))
         .expect("fixture");
@@ -453,9 +452,7 @@ mod tests {
     #[test]
     fn cache_expires_after_fifteen_minutes() {
         let path = std::env::temp_dir().join(format!("models-dev-cache-{}", std::process::id()));
-        let catalog = ModelsDevCatalog {
-            providers: BTreeMap::new(),
-        };
+        let catalog = ModelsDevCatalog::new();
         write_cache(&path, 100, &catalog);
         assert!(read_cache(&path, 100 + CACHE_TTL.as_secs() - 1).is_some());
         assert!(read_cache(&path, 100 + CACHE_TTL.as_secs()).is_none());
