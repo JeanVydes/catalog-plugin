@@ -67,10 +67,10 @@ fn fetch_catalogue() -> Catalogue {
                 .build()
                 .and_then(|client| {
                     let mut request = client.get(MODELS_URL).header("anthropic-version", "2023-06-01");
-                    if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
-                        if !key.trim().is_empty() {
-                            request = request.header("x-api-key", key);
-                        }
+                    if let Ok(key) = std::env::var("ANTHROPIC_API_KEY")
+                        && !key.trim().is_empty()
+                    {
+                        request = request.header("x-api-key", key);
                     }
                     request.send()
                 })

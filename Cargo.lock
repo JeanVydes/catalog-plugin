@@ -122,6 +122,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "catalog-plugin-claude"
+version = "0.1.0"
+dependencies = [
+ "norte-code-plugin-host",
+ "norte-code-wire",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "catalog-plugin-codex"
 version = "0.1.0"
 dependencies = [
@@ -133,7 +143,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "catalog-plugin-commandcode"
+name = "catalog-plugin-google"
 version = "0.1.0"
 dependencies = [
  "norte-code-plugin-host",
@@ -149,6 +159,17 @@ version = "0.1.0"
 dependencies = [
  "norte-code-plugin-host",
  "norte-code-protocol",
+ "norte-code-wire",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "catalog-plugin-openai"
+version = "0.1.0"
+dependencies = [
+ "norte-code-plugin-host",
  "norte-code-wire",
  "reqwest",
  "serde",

@@ -1,10 +1,10 @@
 [package]
-name = "catalog-plugin-commandcode"
+name = "catalog-plugin-google"
 version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 license = "MIT"
-description = "Command Code provider plugin for Norte Code"
+description = "Google Gemini provider plugin for Norte Code"
 publish = false
 
 [lib]

@@ -73,10 +73,10 @@ fn fetch_catalogue() -> Catalogue {
                 .build()
                 .and_then(|client| {
                     let mut request = client.get(MODELS_URL);
-                    if let Ok(key) = std::env::var("OPENCODE_API_KEY") {
-                        if !key.trim().is_empty() {
-                            request = request.header("Authorization", format!("Bearer {}", key));
-                        }
+                    if let Ok(key) = std::env::var("OPENCODE_API_KEY")
+                        && !key.trim().is_empty()
+                    {
+                        request = request.header("Authorization", format!("Bearer {key}"));
                     }
                     request.send()
                 })
