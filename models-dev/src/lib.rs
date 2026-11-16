@@ -10,8 +10,8 @@ use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use norte_code_protocol::catalog::{
-    Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedParams, Wire,
-    WireSchema,
+    Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedEffort,
+    SupportedParams, Wire, WireSchema,
 };
 use norte_code_protocol::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use serde::{Deserialize, Serialize};
@@ -136,6 +136,8 @@ fn catalogue(source: ModelsDevCatalog) -> Catalogue {
 }
 
 fn model(source: ModelsDevModel, model_id: String, provider_id: &str) -> Model {
+    let supported_params = supported_params(&source);
+    let modalities = modalities(source.attachment, source.modalities);
     let id = source.id.unwrap_or(model_id);
     Model {
         id: id.clone(),
@@ -144,46 +146,84 @@ fn model(source: ModelsDevModel, model_id: String, provider_id: &str) -> Model {
         name: source.name,
         description: source.description,
         family: source.family,
-        reasoning: reasoning(source.reasoning),
+        reasoning: reasoning(source.reasoning, &source.reasoning_options),
         knowledge: None,
         release_date: source.release_date,
         last_updated: source.last_updated,
-        modalities: modalities(source.modalities),
+        modalities,
         open_weights: source.open_weights,
         limit: Limit {
             context: source.limit.as_ref().and_then(|limit| limit.context),
             output: source.limit.as_ref().and_then(|limit| limit.output),
         },
         status: None,
-        supported_params: source
-            .supported_params
-            .into_iter()
-            .filter_map(|value| supported_param(&value))
-            .collect(),
+        supported_params,
         pricing: source.pricing.as_ref().map(pricing),
     }
 }
 
-fn reasoning(enabled: bool) -> Reasoning {
+fn reasoning(enabled: bool, options: &[ModelsDevReasoningOption]) -> Reasoning {
+    let mut supported_efforts = Vec::new();
+    let mut budget_supported = false;
+    for option in options {
+        match option.option_type.as_str() {
+            "effort" => {
+                for value in &option.values {
+                    if let Some(effort) = effort(value)
+                        && !supported_efforts.contains(&effort)
+                    {
+                        supported_efforts.push(effort);
+                    }
+                }
+            }
+            "budget_tokens" => budget_supported = true,
+            // "toggle" is reasoning on/off; no levels to pick from; nothing to map.
+            _ => {}
+        }
+    }
     Reasoning {
+        mandatory: false,
         default_enabled: enabled,
-        ..Reasoning::default()
+        default_effort: None,
+        supported_efforts,
+        budget_supported,
     }
 }
 
-fn modalities(values: Option<ModelsDevModalities>) -> Modalities {
+fn effort(value: &str) -> Option<SupportedEffort> {
+    match value.to_ascii_lowercase().as_str() {
+        "none" => Some(SupportedEffort::None),
+        "minimal" => Some(SupportedEffort::Minimal),
+        "low" => Some(SupportedEffort::Low),
+        "medium" => Some(SupportedEffort::Medium),
+        "high" => Some(SupportedEffort::High),
+        "xhigh" => Some(SupportedEffort::Xhigh),
+        "max" => Some(SupportedEffort::Max),
+        _ => None,
+    }
+}
+
+fn modalities(attachment: bool, values: Option<ModelsDevModalities>) -> Modalities {
     let Some(values) = values else {
         return Modalities {
-            input: vec![Modality::Text],
+            input: if attachment {
+                vec![Modality::Text, Modality::File]
+            } else {
+                vec![Modality::Text]
+            },
             output: vec![Modality::Text],
         };
     };
+    let mut input: Vec<Modality> = values
+        .input
+        .iter()
+        .filter_map(|value| modality(value))
+        .collect();
+    if attachment && !input.contains(&Modality::File) {
+        input.push(Modality::File);
+    }
     Modalities {
-        input: values
-            .input
-            .iter()
-            .filter_map(|value| modality(value))
-            .collect(),
+        input,
         output: values
             .output
             .iter()
@@ -209,6 +249,30 @@ fn pricing(value: &ModelsDevPricing) -> Pricing {
         output: value.output,
         cached: value.cache_read,
     }
+}
+
+/// The parameters a model supports.
+///
+/// models.dev does not publish a uniform `supported_parameters` list; it
+/// answers capability questions with `tool_call` and `structured_output`
+/// booleans. Map those onto the parameters they imply so the catalogue
+/// does not report every modern model as tool-incapable.
+fn supported_params(source: &ModelsDevModel) -> Vec<SupportedParams> {
+    let mut params: Vec<SupportedParams> = source
+        .supported_params
+        .iter()
+        .filter_map(|value| supported_param(value))
+        .collect();
+    if source.tool_call && !params.contains(&SupportedParams::Tools) {
+        params.push(SupportedParams::Tools);
+        if !params.contains(&SupportedParams::ToolChoice) {
+            params.push(SupportedParams::ToolChoice);
+        }
+    }
+    if source.structured_output && !params.contains(&SupportedParams::StructuredOutput) {
+        params.push(SupportedParams::StructuredOutput);
+    }
+    params
 }
 
 fn supported_param(value: &str) -> Option<SupportedParams> {
@@ -293,6 +357,7 @@ struct ModelsDevProvider {
     models: BTreeMap<String, ModelsDevModel>,
 }
 
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct ModelsDevModel {
     id: Option<String>,
@@ -301,14 +366,34 @@ struct ModelsDevModel {
     family: Option<String>,
     reasoning: bool,
     #[serde(default)]
+    reasoning_options: Vec<ModelsDevReasoningOption>,
+    #[serde(default)]
     modalities: Option<ModelsDevModalities>,
     open_weights: bool,
     limit: Option<ModelsDevLimit>,
     #[serde(default)]
     supported_params: Vec<String>,
+    #[serde(default)]
+    tool_call: bool,
+    #[serde(default)]
+    structured_output: bool,
+    #[serde(default)]
+    attachment: bool,
     pricing: Option<ModelsDevPricing>,
     release_date: Option<String>,
     last_updated: Option<String>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct ModelsDevReasoningOption {
+    #[serde(rename = "type")]
+    option_type: String,
+    #[serde(default)]
+    values: Vec<String>,
+    #[serde(default)]
+    min: Option<u64>,
+    #[serde(default)]
+    max: Option<u64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -375,5 +460,74 @@ mod tests {
         assert!(read_cache(&path, 100 + CACHE_TTL.as_secs() - 1).is_some());
         assert!(read_cache(&path, 100 + CACHE_TTL.as_secs()).is_none());
         std::fs::remove_file(path).expect("remove test cache");
+    }
+
+    #[test]
+    fn reasoning_toggle_maps_without_efforts() {
+        let source: ModelsDevModel = serde_json::from_value(serde_json::json!({
+            "id": "m",
+            "name": "Model",
+            "reasoning": true,
+            "reasoning_options": [{"type": "toggle"}],
+            "open_weights": true,
+            "limit": { "context": 1000, "output": 100 }
+        }))
+        .expect("fixture");
+        let model = model(source, "m".to_owned(), "models-dev/acme");
+        assert!(model.reasoning.default_enabled);
+        assert_eq!(
+            model.reasoning.supported_efforts,
+            Vec::<SupportedEffort>::new()
+        );
+        assert!(!model.reasoning.mandatory);
+        assert!(!model.reasoning.budget_supported);
+    }
+
+    #[test]
+    fn reasoning_toggle_accepts_a_budget_without_levels() {
+        let source: ModelsDevModel = serde_json::from_value(serde_json::json!({
+            "id": "m",
+            "name": "Model",
+            "reasoning": true,
+            "reasoning_options": [{"type": "budget_tokens", "min": 1024, "max": 24576}],
+            "open_weights": true,
+            "limit": { "context": 1000, "output": 100 }
+        }))
+        .expect("fixture");
+        let model = model(source, "m".to_owned(), "models-dev/acme");
+        assert!(model.reasoning.budget_supported);
+        assert_eq!(
+            model.reasoning.supported_efforts,
+            Vec::<SupportedEffort>::new()
+        );
+    }
+
+    #[test]
+    fn reasoning_options_map_to_catalog() {
+        let source: ModelsDevModel = serde_json::from_value(serde_json::json!({
+            "id": "m",
+            "name": "Model",
+            "reasoning": true,
+            "reasoning_options": [
+                {"type": "effort", "values": ["minimal", "low", "medium", "high", "max"]},
+                {"type": "budget_tokens", "min": 1024, "max": 24576}
+            ],
+            "open_weights": true,
+            "limit": { "context": 1000, "output": 100 }
+        }))
+        .expect("fixture");
+        let model = model(source, "m".to_owned(), "models-dev/acme");
+        assert_eq!(
+            model.reasoning.supported_efforts,
+            vec![
+                SupportedEffort::Minimal,
+                SupportedEffort::Low,
+                SupportedEffort::Medium,
+                SupportedEffort::High,
+                SupportedEffort::Max
+            ]
+        );
+        assert!(model.reasoning.budget_supported);
+        assert!(model.reasoning.default_enabled);
     }
 }
