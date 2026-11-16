@@ -10,11 +10,11 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use norte_code_protocol::catalog::{
+use norte_code_wire::catalog::{
     Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedEffort,
     SupportedParams, Wire, WireSchema,
 };
-use norte_code_protocol::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
+use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use serde::{Deserialize, Serialize};
 
 const MODELS_URL: &str = "https://openrouter.ai/api/v1/models";
@@ -127,6 +127,26 @@ fn write_cache(path: &Path, fetched_at: u64, payload: &OpenRouterResponse) {
     let _ = std::fs::write(path, text);
 }
 
+/// The headers Norte Code sends to `OpenRouter` so the app is attributed in
+/// its rankings and analytics.
+///
+/// `HTTP-Referer` is the identifier `OpenRouter` gives the app, and the title
+/// is the name it shows; without both there is no app page. The category is
+/// the one `OpenRouter` lists for a terminal coding assistant.
+fn openrouter_headers() -> BTreeMap<String, String> {
+    BTreeMap::from([
+        (
+            "HTTP-Referer".to_owned(),
+            "https://norte.vyde.dev".to_owned(),
+        ),
+        ("X-OpenRouter-Title".to_owned(), "Norte Code".to_owned()),
+        (
+            "X-OpenRouter-Categories".to_owned(),
+            "cli-agent,cloud-agent".to_owned(),
+        ),
+    ])
+}
+
 fn provider() -> Provider {
     Provider {
         name: "OpenRouter".to_owned(),
@@ -136,6 +156,7 @@ fn provider() -> Provider {
             api: "https://openrouter.ai/api/v1".to_owned(),
             schema: WireSchema::OpenAI,
             auth: None,
+            headers: openrouter_headers(),
         }],
     }
 }

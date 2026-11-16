@@ -9,11 +9,11 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use norte_code_protocol::catalog::{
+use norte_code_wire::catalog::{
     Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedEffort,
     SupportedParams, Wire, WireSchema,
 };
-use norte_code_protocol::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
+use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use serde::{Deserialize, Serialize};
 
 const CATALOG_URL: &str = "https://models.dev/api.json?type=all";
@@ -126,6 +126,7 @@ fn catalogue(source: ModelsDevCatalog) -> Catalogue {
                     api,
                     schema: npm.schema(),
                     auth: None,
+                    headers: std::collections::BTreeMap::new(),
                 }],
             },
         );

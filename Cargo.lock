@@ -111,10 +111,23 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
+name = "catalog-plugin-codex"
+version = "0.1.0"
+dependencies = [
+ "norte-code-plugin-host",
+ "norte-code-protocol",
+ "norte-code-wire",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "catalog-plugin-models-dev"
 version = "0.1.0"
 dependencies = [
+ "norte-code-plugin-host",
  "norte-code-protocol",
+ "norte-code-wire",
  "reqwest",
  "serde",
  "serde_json",
@@ -124,7 +137,9 @@ dependencies = [
 name = "catalog-plugin-openrouter"
 version = "0.1.0"
 dependencies = [
+ "norte-code-plugin-host",
  "norte-code-protocol",
+ "norte-code-wire",
  "reqwest",
  "serde",
  "serde_json",
@@ -818,6 +833,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
+name = "libloading"
+version = "0.8.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d7c4b02199fee7c5d21a5ae7d8cfa79a6ef5bb2fc834d6e9058e89c825efdc55"
+dependencies = [
+ "cfg-if",
+ "windows-link",
+]
+
+[[package]]
 name = "libsqlite3-sys"
 version = "0.35.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -924,7 +949,7 @@ dependencies = [
 [[package]]
 name = "norte"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "norte-anthropic",
  "norte-core",
@@ -932,7 +957,6 @@ dependencies = [
  "norte-http",
  "norte-macros",
  "norte-mcp",
- "norte-media",
  "norte-openai",
  "norte-tools",
 ]
@@ -940,7 +964,7 @@ dependencies = [
 [[package]]
 name = "norte-anthropic"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -955,15 +979,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "norte-code-plugin-host"
+version = "0.1.0"
+source = "git+https://github.com/JeanVydes/NorteCode.git?branch=dev#e3e1797506b1d28943a2f8750a65fb98b9bcfcc4"
+dependencies = [
+ "libloading",
+ "norte-code-protocol",
+ "norte-code-wire",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "norte-code-protocol"
 version = "0.1.0"
-source = "git+https://github.com/JeanVydes/NorteCode.git?branch=dev#61893ac9153c9c54c40c11dbcb5c66c773f9eb93"
+source = "git+https://github.com/JeanVydes/NorteCode.git?branch=dev#e3e1797506b1d28943a2f8750a65fb98b9bcfcc4"
 dependencies = [
  "async-trait",
  "chrono",
  "globset",
  "ignore",
  "norte",
+ "norte-code-wire",
  "regex",
  "reqwest",
  "rusqlite",
@@ -979,15 +1016,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "norte-code-wire"
+version = "0.1.0"
+source = "git+https://github.com/JeanVydes/NorteCode.git?branch=dev#e3e1797506b1d28943a2f8750a65fb98b9bcfcc4"
+dependencies = [
+ "base64 0.22.1",
+ "schemars",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "norte-core"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
  "chrono",
  "futures-core",
  "futures-util",
+ "image",
  "norte-macros",
  "schemars",
  "serde",
@@ -1003,7 +1052,7 @@ dependencies = [
 [[package]]
 name = "norte-gemini"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -1020,7 +1069,7 @@ dependencies = [
 [[package]]
 name = "norte-http"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "async-trait",
  "bytes",
@@ -1040,7 +1089,7 @@ dependencies = [
 [[package]]
 name = "norte-macros"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1050,7 +1099,7 @@ dependencies = [
 [[package]]
 name = "norte-mcp"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -1066,19 +1115,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "norte-media"
-version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
-dependencies = [
- "async-trait",
- "image",
- "norte-core",
-]
-
-[[package]]
 name = "norte-openai"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "async-trait",
  "base64 0.22.1",
@@ -1095,7 +1134,7 @@ dependencies = [
 [[package]]
 name = "norte-tools"
 version = "0.0.2"
-source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#1f4da28fcbff30a3c2a8adf14332247d35eb5aae"
+source = "git+https://github.com/JeanVydes/Norte.git?branch=dev#756ced3a0841272b469805ea815296165391b545"
 dependencies = [
  "async-trait",
  "chrono",

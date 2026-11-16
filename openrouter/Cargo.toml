@@ -11,6 +11,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 norte-code-protocol.workspace = true
+norte-code-wire.workspace = true
+norte-code-plugin-host.workspace = true
 reqwest.workspace = true
 serde.workspace = true
 serde_json.workspace = true
