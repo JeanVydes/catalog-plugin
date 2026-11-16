@@ -94,7 +94,8 @@ fn fetch_catalogue() -> Catalogue {
                 .and_then(|client| client.get(CATALOG_URL).send())
                 .and_then(reqwest::blocking::Response::error_for_status)
                 .ok()?;
-            let payload = response.json::<ModelsDevCatalog>().ok()?;
+            let text = response.text().ok()?;
+            let payload: ModelsDevCatalog = serde_json::from_str(&text).ok()?;
             if let Some(path) = path.as_deref() {
                 write_cache(path, now, &payload);
             }
@@ -316,7 +317,8 @@ fn unix_now() -> u64 {
 
 fn read_cache(path: &Path, now: u64) -> Option<ModelsDevCatalog> {
     let cache: CachedCatalog = serde_json::from_str(&std::fs::read_to_string(path).ok()?).ok()?;
-    (now.saturating_sub(cache.fetched_at) < CACHE_TTL.as_secs()).then_some(cache.catalog)
+    (now.saturating_sub(cache.fetched_at) < CACHE_TTL.as_secs() && !cache.catalog.is_empty())
+        .then_some(cache.catalog)
 }
 
 fn write_cache(path: &Path, fetched_at: u64, catalog: &ModelsDevCatalog) {
@@ -392,9 +394,9 @@ struct ModelsDevReasoningOption {
     #[serde(default)]
     values: Vec<String>,
     #[serde(default)]
-    min: Option<u64>,
+    min: Option<i64>,
     #[serde(default)]
-    max: Option<u64>,
+    max: Option<i64>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -452,7 +454,16 @@ mod tests {
     #[test]
     fn cache_expires_after_fifteen_minutes() {
         let path = std::env::temp_dir().join(format!("models-dev-cache-{}", std::process::id()));
-        let catalog = ModelsDevCatalog::new();
+        let catalog = ModelsDevCatalog::from_iter([(
+            "acme".to_owned(),
+            ModelsDevProvider {
+                name: "Acme".to_owned(),
+                env: Vec::new(),
+                npm: Some("@ai-sdk/openai-compatible".to_owned()),
+                api: Some("https://api.acme/v1".to_owned()),
+                models: BTreeMap::new(),
+            },
+        )]);
         write_cache(&path, 100, &catalog);
         assert!(read_cache(&path, 100 + CACHE_TTL.as_secs() - 1).is_some());
         assert!(read_cache(&path, 100 + CACHE_TTL.as_secs()).is_none());
