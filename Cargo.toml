@@ -1,6 +1,6 @@
 [workspace]
 resolver = "3"
-members = ["openrouter", "models-dev", "codex"]
+members = ["openrouter", "models-dev", "codex", "anthropic", "opencode", "commandcode"]
 
 [workspace.package]
 edition = "2024"

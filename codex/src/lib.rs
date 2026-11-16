@@ -1,6 +1,6 @@
 //! `Codex` provider plugin for Norte Code.
 //!
-//! Codex (the ChatGPT harness) stores its credentials in `auth.json`, not in
+//! `Codex` (the `ChatGPT` harness) stores its credentials in `auth.json`, not in
 //! a Norte Code-owned key. This plugin exposes the same provider through the
 //! host's catalogue so a Norte Code session can drive it without asking a
 //! person to type a key that is already on disk.
@@ -11,7 +11,7 @@
 //! for Norte Code to consume.
 //!
 //! The provider ships with no models: the model ids Codex serves are not a
-//! stable list — they change with the harness and with the ChatGPT plan —
+//! stable list — they change with the harness and with the `ChatGPT` plan —
 //! so the catalogue does not claim any of them by hand. When the harness
 //! publishes an authoritative list, this is where it belongs.
 //!
@@ -116,7 +116,7 @@ struct CodexAuth {
 fn catalogue() -> Catalogue {
     let providers = BTreeMap::from([(PROVIDER_ID.to_owned(), provider())]);
     // The catalogue is empty by design: Codex's offered model ids are not
-    // static — they follow the ChatGPT plan and the harness' own release
+    // static — they follow the `ChatGPT` plan and the harness' own release
     // calendar — so the catalogue does not pin any of them here. A release
     // landing in the CLI is visible once the plugin merges an authoritative
     // list; hard-coding names here would leave stale entries behind.

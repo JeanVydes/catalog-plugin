@@ -111,6 +111,17 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fc652a48c352aef3ea3aed32080501cf3ef6ed5da78602a020c991775b0aff04"
 
 [[package]]
+name = "catalog-plugin-anthropic"
+version = "0.1.0"
+dependencies = [
+ "norte-code-plugin-host",
+ "norte-code-wire",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "catalog-plugin-codex"
 version = "0.1.0"
 dependencies = [
@@ -122,11 +133,33 @@ dependencies = [
 ]
 
 [[package]]
+name = "catalog-plugin-commandcode"
+version = "0.1.0"
+dependencies = [
+ "norte-code-plugin-host",
+ "norte-code-wire",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "catalog-plugin-models-dev"
 version = "0.1.0"
 dependencies = [
  "norte-code-plugin-host",
  "norte-code-protocol",
+ "norte-code-wire",
+ "reqwest",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "catalog-plugin-opencode"
+version = "0.1.0"
+dependencies = [
+ "norte-code-plugin-host",
  "norte-code-wire",
  "reqwest",
  "serde",
