@@ -72,16 +72,13 @@ fn fetch_catalogue() -> Catalogue {
                 .user_agent("norte-code-catalog-plugin-opencode/0.1")
                 .build()
                 .and_then(|client| {
-                    client
-                        .get(MODELS_URL)
-                        .header(
-                            "Authorization",
-                            format!(
-                                "Bearer {}",
-                                std::env::var("OPENCODE_API_KEY").unwrap_or_default()
-                            ),
-                        )
-                        .send()
+                    let mut request = client.get(MODELS_URL);
+                    if let Ok(key) = std::env::var("OPENCODE_API_KEY") {
+                        if !key.trim().is_empty() {
+                            request = request.header("Authorization", format!("Bearer {}", key));
+                        }
+                    }
+                    request.send()
                 })
                 .ok()?;
             let payload = response.json::<OpenCodeModelsResponse>().ok()?;

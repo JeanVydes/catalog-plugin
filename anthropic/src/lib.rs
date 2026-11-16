@@ -66,14 +66,13 @@ fn fetch_catalogue() -> Catalogue {
                 .user_agent("norte-code-catalog-plugin-anthropic/0.1")
                 .build()
                 .and_then(|client| {
-                    client
-                        .get(MODELS_URL)
-                        .header(
-                            "x-api-key",
-                            std::env::var("ANTHROPIC_API_KEY").unwrap_or_default(),
-                        )
-                        .header("anthropic-version", "2023-06-01")
-                        .send()
+                    let mut request = client.get(MODELS_URL).header("anthropic-version", "2023-06-01");
+                    if let Ok(key) = std::env::var("ANTHROPIC_API_KEY") {
+                        if !key.trim().is_empty() {
+                            request = request.header("x-api-key", key);
+                        }
+                    }
+                    request.send()
                 })
                 .ok()?;
             let payload = response.json::<AnthropicModelsResponse>().ok()?;
