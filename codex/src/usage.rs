@@ -1,12 +1,14 @@
 //! Reads account quota through the installed Codex app server.
 
 use std::io::{BufRead, BufReader, Write};
-use std::process::{ChildStdin, Command, Stdio};
+use std::process::{ChildStdin, Stdio};
 use std::sync::mpsc::{self, Receiver};
 use std::time::{Duration, Instant};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+
+use crate::executable;
 
 const TIMEOUT: Duration = Duration::from_secs(8);
 
@@ -61,13 +63,15 @@ struct ClientInfo {
 }
 
 pub(super) fn read() -> Option<Usage> {
-    let mut child = Command::new("codex")
-        .args(["app-server", "--listen", "stdio://"])
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .ok()?;
+    let mut child = executable::run(|command| {
+        command
+            .args(["app-server", "--listen", "stdio://"])
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::null())
+            .spawn()
+    })
+    .ok()?;
     let result = child
         .stdin
         .take()

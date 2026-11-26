@@ -1,7 +1,8 @@
 use std::path::PathBuf;
-use std::process::Command;
 
 use serde::Deserialize;
+
+use crate::executable;
 
 pub(super) fn read_auth() -> Option<CodexAuth> {
     auth_paths()
@@ -70,7 +71,7 @@ fn cached_client_version() -> Option<String> {
 }
 
 fn installed_client_version() -> Option<String> {
-    let output = Command::new("codex").arg("--version").output().ok()?;
+    let output = executable::run(|command| command.arg("--version").output()).ok()?;
     if !output.status.success() {
         return None;
     }

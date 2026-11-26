@@ -57,6 +57,8 @@ norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package cat
 When a Codex model is selected, the chat rail displays the account's available
 usage windows. The plugin asks the installed, signed-in Codex CLI for limits
 through its app server and refreshes while the rail is visible.
+On Linux, it also checks `/usr/lib/chatgpt/resources/codex` when the service
+cannot find `codex` on its `PATH`.
 
 ## OpenAI
 

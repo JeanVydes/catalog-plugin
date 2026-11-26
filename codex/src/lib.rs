@@ -2,6 +2,7 @@
 
 mod api;
 mod auth;
+mod executable;
 mod models;
 mod usage;
 mod usage_widget;
