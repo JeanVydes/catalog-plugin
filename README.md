@@ -6,7 +6,7 @@ This workspace contains provider plugins that can be installed with:
 norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-openrouter
 ```
 
-Build these plugins against Norte Code plugin ABI 3. Rebuild installed plugins when upgrading the host from ABI 2.
+Build these plugins against Norte Code plugin ABI 4. Rebuild installed plugins when upgrading the host from an older ABI.
 
 ## OpenRouter
 
@@ -53,6 +53,10 @@ Install it with:
 ```text
 norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-codex
 ```
+
+When a Codex model is selected, the chat rail displays the account's available
+usage windows. The plugin asks the installed, signed-in Codex CLI for limits
+through its app server and refreshes while the rail is visible.
 
 ## OpenAI
 

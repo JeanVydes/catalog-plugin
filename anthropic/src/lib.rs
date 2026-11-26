@@ -35,8 +35,29 @@ impl Plugin for AnthropicPlugin {
         self.state().catalogue.clone()
     }
 
-    fn status(&self) -> Option<String> {
-        self.state().status.clone()
+    fn widgets(&self) -> Vec<norte_code_plugin_host::WidgetDefinition> {
+        vec![norte_code_plugin_host::WidgetDefinition {
+            id: norte_code_wire::plugin_widgets::WidgetId::new("catalog-status"),
+            title: "Catalogue status".to_owned(),
+        }]
+    }
+
+    fn widget(
+        &self,
+        id: &norte_code_wire::plugin_widgets::WidgetId,
+        invocation: &norte_code_plugin_host::PluginInvocation,
+    ) -> Option<norte_code_wire::plugin_widgets::WidgetView> {
+        use norte_code_wire::plugin_widgets::{Widget, WidgetView};
+
+        let selection = &invocation.selection;
+        if id.as_str() != "catalog-status" || selection.provider.as_deref() != Some(self.name()) {
+            return None;
+        }
+        let text = self.state().status.clone()?;
+        Some(WidgetView {
+            title: Some(self.name().to_uppercase()),
+            content: vec![Widget::Text { text }],
+        })
     }
 }
 
