@@ -10,11 +10,12 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use norte_code_wire::catalog::{
-    Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedEffort,
-    SupportedParams, Wire, WireSchema,
-};
 use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
+use norte_code_wire::catalog::{
+    Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedEffort, Wire,
+    WireSchema,
+};
+use norte_types::SupportedParam;
 use serde::{Deserialize, Serialize};
 
 const MODELS_URL: &str = "https://openrouter.ai/api/v1/models";
@@ -153,6 +154,7 @@ fn provider() -> Provider {
         doc: Some("https://openrouter.ai/docs".to_owned()),
         environment_keys: vec!["OPENROUTER_API_KEY".to_owned()],
         wires: vec![Wire {
+            quirks: std::collections::BTreeSet::new(),
             api: "https://openrouter.ai/api/v1".to_owned(),
             schema: WireSchema::OpenAI,
             auth: None,
@@ -170,6 +172,8 @@ fn has_chat_endpoint(model: &OpenRouterModel) -> bool {
 
 fn model(source: OpenRouterModel) -> Model {
     Model {
+        supported_params_complete: false,
+        quirks: BTreeMap::new(),
         id: source.id.clone(),
         provider_id: PROVIDER_ID.to_owned(),
         canonical_slug: source.canonical_slug.unwrap_or_else(|| source.id.clone()),
@@ -271,7 +275,7 @@ fn effort(value: &str) -> Option<SupportedEffort> {
     }
 }
 
-fn supported_params(values: &[String]) -> Vec<SupportedParams> {
+fn supported_params(values: &[String]) -> Vec<SupportedParam> {
     let mut params: Vec<_> = values
         .iter()
         .filter_map(|value| supported_param(value))
@@ -281,30 +285,30 @@ fn supported_params(values: &[String]) -> Vec<SupportedParams> {
     params
 }
 
-fn supported_param(value: &str) -> Option<SupportedParams> {
+fn supported_param(value: &str) -> Option<SupportedParam> {
     match value {
-        "frequency_penalty" => Some(SupportedParams::FrequencyPenalty),
-        "include_reasoning" => Some(SupportedParams::IncludeReasoning),
-        "logprobs" => Some(SupportedParams::Logprobs),
-        "max_tokens" => Some(SupportedParams::MaxTokens),
-        "min_p" => Some(SupportedParams::MinP),
-        "presence_penalty" => Some(SupportedParams::PresencePenalty),
-        "reasoning" => Some(SupportedParams::Reasoning),
-        "reasoning_effort" => Some(SupportedParams::ReasoningEffort),
-        "response_format" => Some(SupportedParams::ResponseFormat),
-        "seed" => Some(SupportedParams::Seed),
-        "stop" => Some(SupportedParams::Stop),
-        "structured_outputs" => Some(SupportedParams::StructuredOutput),
-        "temperature" => Some(SupportedParams::Temperature),
-        "tool_choice" => Some(SupportedParams::ToolChoice),
-        "tools" => Some(SupportedParams::Tools),
-        "top_p" => Some(SupportedParams::TopP),
-        "top_logprobs" => Some(SupportedParams::TopLogprobs),
-        "top_k" => Some(SupportedParams::TopK),
-        "top_a" => Some(SupportedParams::TopA),
-        "logit_bias" => Some(SupportedParams::LogitBias),
-        "repetition_penalty" => Some(SupportedParams::RepetitionPenalty),
-        "verbosity" => Some(SupportedParams::Verbosity),
+        "frequency_penalty" => Some(SupportedParam::FrequencyPenalty),
+        "include_reasoning" => Some(SupportedParam::IncludeReasoning),
+        "logprobs" => Some(SupportedParam::Logprobs),
+        "max_tokens" => Some(SupportedParam::MaxOutputTokens),
+        "min_p" => Some(SupportedParam::MinP),
+        "presence_penalty" => Some(SupportedParam::PresencePenalty),
+        "reasoning" => Some(SupportedParam::Reasoning),
+        "reasoning_effort" => Some(SupportedParam::ReasoningEffort),
+        "response_format" => Some(SupportedParam::ResponseFormat),
+        "seed" => Some(SupportedParam::Seed),
+        "stop" => Some(SupportedParam::StopSequences),
+        "structured_outputs" => Some(SupportedParam::StructuredOutput),
+        "temperature" => Some(SupportedParam::Temperature),
+        "tool_choice" => Some(SupportedParam::ToolChoice),
+        "tools" => Some(SupportedParam::Tools),
+        "top_p" => Some(SupportedParam::TopP),
+        "top_logprobs" => Some(SupportedParam::TopLogprobs),
+        "top_k" => Some(SupportedParam::TopK),
+        "top_a" => Some(SupportedParam::TopA),
+        "logit_bias" => Some(SupportedParam::LogitBias),
+        "repetition_penalty" => Some(SupportedParam::RepetitionPenalty),
+        "verbosity" => Some(SupportedParam::Verbosity),
         _ => None,
     }
 }
@@ -412,7 +416,7 @@ mod tests {
         assert_eq!(mapped.reasoning.default_effort, Some(SupportedEffort::High));
         assert_eq!(
             mapped.supported_params,
-            [SupportedParams::Temperature, SupportedParams::Tools]
+            [SupportedParam::Temperature, SupportedParam::Tools]
         );
     }
 

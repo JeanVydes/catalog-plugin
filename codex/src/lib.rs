@@ -82,6 +82,7 @@ fn provider() -> Provider {
         doc: Some(PROVIDER_DOC.to_owned()),
         environment_keys: vec![ENV_KEY.to_owned()],
         wires: vec![Wire {
+            quirks: [norte_types::Quirk::NoPromptCacheBreakpoints].into(),
             api: API_URL.to_owned(),
             schema: WireSchema::Responses,
             auth: None,
@@ -89,3 +90,7 @@ fn provider() -> Provider {
         }],
     }
 }
+
+#[cfg(test)]
+#[path = "provider_tests.rs"]
+mod provider_tests;

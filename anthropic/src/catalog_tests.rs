@@ -1,6 +1,5 @@
-use norte_code_wire::catalog::{
-    Modality, ModelStatus, SupportedEffort, SupportedParams, WireSchema,
-};
+use norte_code_wire::catalog::{Modality, ModelStatus, SupportedEffort, WireSchema};
+use norte_types::SupportedParam;
 
 use super::{
     AnthropicModel, CapabilitySupport, EffortCapability, ModelCapabilities, ModelLifecycle,
@@ -55,11 +54,11 @@ fn maps_only_published_model_limits_and_capabilities() {
             SupportedEffort::High
         ]
     );
-    assert!(mapped.supported_params.contains(&SupportedParams::Tools));
+    assert!(mapped.supported_params.contains(&SupportedParam::Tools));
     assert!(
         mapped
             .supported_params
-            .contains(&SupportedParams::StructuredOutput)
+            .contains(&SupportedParam::StructuredOutput)
     );
 }
 
@@ -82,7 +81,7 @@ fn marks_deprecated_models_and_does_not_invent_capabilities() {
     assert!(
         !mapped
             .supported_params
-            .contains(&SupportedParams::StructuredOutput)
+            .contains(&SupportedParam::StructuredOutput)
     );
 }
 

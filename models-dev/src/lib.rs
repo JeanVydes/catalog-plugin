@@ -9,11 +9,12 @@ use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-use norte_code_wire::catalog::{
-    Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedEffort,
-    SupportedParams, Wire, WireSchema,
-};
 use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
+use norte_code_wire::catalog::{
+    Limit, Modalities, Modality, Model, Pricing, Provider, Reasoning, SupportedEffort, Wire,
+    WireSchema,
+};
+use norte_types::SupportedParam;
 use serde::{Deserialize, Serialize};
 
 const CATALOG_URL: &str = "https://models.dev/api.json?type=all";
@@ -123,6 +124,7 @@ fn catalogue(source: ModelsDevCatalog) -> Catalogue {
                 doc: Some("https://models.dev".to_owned()),
                 environment_keys: source_provider.env,
                 wires: vec![Wire {
+                    quirks: std::collections::BTreeSet::new(),
                     api,
                     schema: npm.schema(),
                     auth: None,
@@ -142,6 +144,8 @@ fn model(source: ModelsDevModel, model_id: String, provider_id: &str) -> Model {
     let modalities = modalities(source.attachment, source.modalities);
     let id = source.id.unwrap_or(model_id);
     Model {
+        supported_params_complete: false,
+        quirks: BTreeMap::new(),
         id: id.clone(),
         provider_id: provider_id.to_owned(),
         canonical_slug: format!("{provider_id}/{id}"),
@@ -259,36 +263,36 @@ fn pricing(value: &ModelsDevPricing) -> Pricing {
 /// answers capability questions with `tool_call` and `structured_output`
 /// booleans. Map those onto the parameters they imply so the catalogue
 /// does not report every modern model as tool-incapable.
-fn supported_params(source: &ModelsDevModel) -> Vec<SupportedParams> {
-    let mut params: Vec<SupportedParams> = source
+fn supported_params(source: &ModelsDevModel) -> Vec<SupportedParam> {
+    let mut params: Vec<SupportedParam> = source
         .supported_params
         .iter()
         .filter_map(|value| supported_param(value))
         .collect();
-    if source.tool_call && !params.contains(&SupportedParams::Tools) {
-        params.push(SupportedParams::Tools);
-        if !params.contains(&SupportedParams::ToolChoice) {
-            params.push(SupportedParams::ToolChoice);
+    if source.tool_call && !params.contains(&SupportedParam::Tools) {
+        params.push(SupportedParam::Tools);
+        if !params.contains(&SupportedParam::ToolChoice) {
+            params.push(SupportedParam::ToolChoice);
         }
     }
-    if source.structured_output && !params.contains(&SupportedParams::StructuredOutput) {
-        params.push(SupportedParams::StructuredOutput);
+    if source.structured_output && !params.contains(&SupportedParam::StructuredOutput) {
+        params.push(SupportedParam::StructuredOutput);
     }
     params
 }
 
-fn supported_param(value: &str) -> Option<SupportedParams> {
+fn supported_param(value: &str) -> Option<SupportedParam> {
     match value {
-        "frequency_penalty" => Some(SupportedParams::FrequencyPenalty),
-        "max_tokens" => Some(SupportedParams::MaxTokens),
-        "reasoning" => Some(SupportedParams::Reasoning),
-        "reasoning_effort" => Some(SupportedParams::ReasoningEffort),
-        "response_format" => Some(SupportedParams::ResponseFormat),
-        "structured_outputs" => Some(SupportedParams::StructuredOutput),
-        "temperature" => Some(SupportedParams::Temperature),
-        "tool_choice" => Some(SupportedParams::ToolChoice),
-        "tools" => Some(SupportedParams::Tools),
-        "top_p" => Some(SupportedParams::TopP),
+        "frequency_penalty" => Some(SupportedParam::FrequencyPenalty),
+        "max_tokens" => Some(SupportedParam::MaxOutputTokens),
+        "reasoning" => Some(SupportedParam::Reasoning),
+        "reasoning_effort" => Some(SupportedParam::ReasoningEffort),
+        "response_format" => Some(SupportedParam::ResponseFormat),
+        "structured_outputs" => Some(SupportedParam::StructuredOutput),
+        "temperature" => Some(SupportedParam::Temperature),
+        "tool_choice" => Some(SupportedParam::ToolChoice),
+        "tools" => Some(SupportedParam::Tools),
+        "top_p" => Some(SupportedParam::TopP),
         _ => None,
     }
 }

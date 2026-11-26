@@ -10,6 +10,7 @@ description = "Norte Code plugin that discovers OpenRouter's OpenAI-compatible m
 crate-type = ["cdylib"]
 
 [dependencies]
+norte-types = { workspace = true }
 norte-code-wire.workspace = true
 norte-code-plugin-host.workspace = true
 reqwest.workspace = true

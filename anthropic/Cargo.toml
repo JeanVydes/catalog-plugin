@@ -11,6 +11,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
+norte-types = { workspace = true }
 norte-code-plugin-host.workspace = true
 norte-code-wire.workspace = true
 reqwest.workspace = true

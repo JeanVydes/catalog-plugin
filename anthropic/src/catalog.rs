@@ -8,9 +8,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use norte_code_plugin_host::plugins::Catalogue;
 use norte_code_wire::catalog::{
-    Limit, Modalities, Modality, Model, ModelStatus, Provider, Reasoning, SupportedEffort,
-    SupportedParams, Wire, WireSchema,
+    Limit, Modalities, Modality, Model, ModelStatus, Provider, Reasoning, SupportedEffort, Wire,
+    WireSchema,
 };
+use norte_types::SupportedParam;
 use serde::{Deserialize, Serialize};
 
 const MODELS_URL: &str = "https://api.anthropic.com/v1/models";
@@ -279,6 +280,7 @@ fn provider(workspace_id: Option<&str>) -> Provider {
         doc: Some("https://docs.anthropic.com/en/api/models-list".to_owned()),
         environment_keys: vec!["ANTHROPIC_API_KEY".to_owned()],
         wires: vec![Wire {
+            quirks: std::collections::BTreeSet::new(),
             api: "https://api.anthropic.com".to_owned(),
             schema: WireSchema::Anthropic,
             auth: None,
@@ -312,19 +314,21 @@ fn model(source: AnthropicModel) -> Model {
         .types
         .as_ref()
         .is_some_and(|types| supported(types.adaptive.as_ref()));
-    let mut supported_params = vec![SupportedParams::Tools, SupportedParams::ToolChoice];
+    let mut supported_params = vec![SupportedParam::Tools, SupportedParam::ToolChoice];
     if supported(capabilities.structured_outputs.as_ref()) {
-        supported_params.push(SupportedParams::StructuredOutput);
+        supported_params.push(SupportedParam::StructuredOutput);
     }
     if thinking.supported {
-        supported_params.push(SupportedParams::Reasoning);
+        supported_params.push(SupportedParam::Reasoning);
     }
     if effort.supported {
-        supported_params.push(SupportedParams::ReasoningEffort);
+        supported_params.push(SupportedParam::ReasoningEffort);
     }
 
     let id = source.id;
     Model {
+        supported_params_complete: false,
+        quirks: BTreeMap::new(),
         id: id.clone(),
         provider_id: PROVIDER_ID.to_owned(),
         canonical_slug: format!("{PROVIDER_ID}/{id}"),

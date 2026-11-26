@@ -1,4 +1,5 @@
-use norte_code_wire::catalog::{Modality, Model, SupportedEffort, SupportedParams};
+use norte_code_wire::catalog::{Modality, Model, SupportedEffort};
+use norte_types::SupportedParam;
 use serde_json::json;
 
 use super::CodexModelsResponse;
@@ -59,10 +60,10 @@ fn maps_only_visible_api_models_and_keeps_supported_metadata() {
         model.reasoning.supported_efforts,
         [SupportedEffort::Low, SupportedEffort::Medium]
     );
-    assert!(model.supported_params.contains(&SupportedParams::Tools));
+    assert!(model.supported_params.contains(&SupportedParam::Tools));
     assert!(
         model
             .supported_params
-            .contains(&SupportedParams::ReasoningEffort)
+            .contains(&SupportedParam::ReasoningEffort)
     );
 }

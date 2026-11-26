@@ -6,6 +6,8 @@ This workspace contains provider plugins that can be installed with:
 norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-openrouter
 ```
 
+Build these plugins against Norte Code plugin ABI 3. Rebuild installed plugins when upgrading the host from ABI 2.
+
 ## OpenRouter
 
 `catalog-plugin-openrouter` fetches `https://openrouter.ai/api/v1/models` when its

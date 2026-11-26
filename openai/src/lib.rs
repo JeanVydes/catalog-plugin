@@ -9,9 +9,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use norte_code_wire::catalog::{
-    Limit, Modalities, Modality, Model, ModelStatus, Provider, Reasoning, SupportedParams, Wire,
-    WireSchema,
+    Limit, Modalities, Modality, Model, ModelStatus, Provider, Reasoning, Wire, WireSchema,
 };
+use norte_types::SupportedParam;
 use serde::{Deserialize, Serialize};
 
 const MODELS_URL: &str = "https://api.openai.com/v1/models";
@@ -212,6 +212,7 @@ fn provider() -> Provider {
         doc: Some("https://developers.openai.com/api/docs/models".to_owned()),
         environment_keys: vec!["OPENAI_API_KEY".to_owned()],
         wires: vec![Wire {
+            quirks: std::collections::BTreeSet::new(),
             api: "https://api.openai.com/v1".to_owned(),
             schema: WireSchema::OpenAI,
             auth: None,
@@ -223,6 +224,8 @@ fn provider() -> Provider {
 fn model(source: OpenAiModel) -> Model {
     let id = source.id;
     Model {
+        supported_params_complete: false,
+        quirks: BTreeMap::new(),
         id: id.clone(),
         provider_id: PROVIDER_ID.to_owned(),
         canonical_slug: format!("{PROVIDER_ID}/{id}"),
@@ -241,9 +244,9 @@ fn model(source: OpenAiModel) -> Model {
         limit: Limit::default(),
         status: source.shutdown_date.map(|_| ModelStatus::Deprecated),
         supported_params: vec![
-            SupportedParams::Tools,
-            SupportedParams::ToolChoice,
-            SupportedParams::MaxTokens,
+            SupportedParam::Tools,
+            SupportedParam::ToolChoice,
+            SupportedParam::MaxOutputTokens,
         ],
         pricing: None,
     }

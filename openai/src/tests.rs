@@ -1,4 +1,5 @@
-use norte_code_wire::catalog::{Modality, ModelStatus, SupportedParams, WireSchema};
+use norte_code_wire::catalog::{Modality, ModelStatus, WireSchema};
+use norte_types::SupportedParam;
 
 use super::{OpenAiModel, OpenAiModelsResponse, is_chat_model, model, provider};
 
@@ -47,7 +48,7 @@ fn maps_only_metadata_the_models_endpoint_can_support() {
     assert_eq!(mapped.modalities.input, [Modality::Text]);
     assert!(mapped.limit.context.is_none());
     assert_eq!(mapped.reasoning.supported_efforts, Vec::new());
-    assert!(mapped.supported_params.contains(&SupportedParams::Tools));
+    assert!(mapped.supported_params.contains(&SupportedParam::Tools));
 }
 
 #[test]

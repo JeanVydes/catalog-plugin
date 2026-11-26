@@ -1,6 +1,5 @@
-use norte_code_wire::catalog::{
-    Limit, Modalities, Modality, Model, Reasoning, SupportedEffort, SupportedParams,
-};
+use norte_code_wire::catalog::{Limit, Modalities, Modality, Model, Reasoning, SupportedEffort};
+use norte_types::SupportedParam;
 use serde::Deserialize;
 
 const PROVIDER_ID: &str = "codex";
@@ -157,14 +156,14 @@ impl CodexModality {
     }
 }
 
-fn supported_params(has_reasoning: bool) -> Vec<SupportedParams> {
+fn supported_params(has_reasoning: bool) -> Vec<SupportedParam> {
     let mut params = vec![
-        SupportedParams::Tools,
-        SupportedParams::ToolChoice,
-        SupportedParams::StructuredOutput,
+        SupportedParam::Tools,
+        SupportedParam::ToolChoice,
+        SupportedParam::StructuredOutput,
     ];
     if has_reasoning {
-        params.extend([SupportedParams::Reasoning, SupportedParams::ReasoningEffort]);
+        params.extend([SupportedParam::Reasoning, SupportedParam::ReasoningEffort]);
     }
     params
 }

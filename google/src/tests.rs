@@ -1,4 +1,5 @@
-use norte_code_wire::catalog::{Modality, SupportedParams, WireSchema};
+use norte_code_wire::catalog::{Modality, WireSchema};
+use norte_types::SupportedParam;
 
 use super::{GoogleModel, is_generate_content_model, model, model_id, provider};
 
@@ -32,12 +33,8 @@ fn uses_base_model_id_and_api_token_limits() {
     assert_eq!(mapped.modalities.input, [Modality::Text]);
     assert!(!mapped.reasoning.default_enabled);
     assert!(mapped.reasoning.budget_supported);
-    assert!(
-        mapped
-            .supported_params
-            .contains(&SupportedParams::Reasoning)
-    );
-    assert!(mapped.supported_params.contains(&SupportedParams::Tools));
+    assert!(mapped.supported_params.contains(&SupportedParam::Reasoning));
+    assert!(mapped.supported_params.contains(&SupportedParam::Tools));
 }
 
 #[test]

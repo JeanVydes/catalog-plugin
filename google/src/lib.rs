@@ -9,8 +9,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use norte_code_wire::catalog::{
-    Limit, Modalities, Modality, Model, Provider, Reasoning, SupportedParams, Wire, WireSchema,
+    Limit, Modalities, Modality, Model, Provider, Reasoning, Wire, WireSchema,
 };
+use norte_types::SupportedParam;
 use serde::{Deserialize, Serialize};
 
 const MODELS_URL: &str = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -233,6 +234,7 @@ fn provider() -> Provider {
         doc: Some("https://ai.google.dev/api/models".to_owned()),
         environment_keys: vec!["GOOGLE_API_KEY".to_owned(), "GEMINI_API_KEY".to_owned()],
         wires: vec![Wire {
+            quirks: std::collections::BTreeSet::new(),
             api: "https://generativelanguage.googleapis.com/v1beta".to_owned(),
             schema: WireSchema::Google,
             auth: None,
@@ -256,18 +258,20 @@ fn model(source: GoogleModel) -> Model {
     } else {
         Reasoning::default()
     };
-    let mut supported_params = vec![SupportedParams::MaxTokens];
+    let mut supported_params = vec![SupportedParam::MaxOutputTokens];
     if id.starts_with("gemini-") {
         supported_params.extend([
-            SupportedParams::Tools,
-            SupportedParams::ToolChoice,
-            SupportedParams::StructuredOutput,
+            SupportedParam::Tools,
+            SupportedParam::ToolChoice,
+            SupportedParam::StructuredOutput,
         ]);
     }
     if source.thinking {
-        supported_params.push(SupportedParams::Reasoning);
+        supported_params.push(SupportedParam::Reasoning);
     }
     Model {
+        supported_params_complete: false,
+        quirks: BTreeMap::new(),
         id: id.clone(),
         provider_id: PROVIDER_ID.to_owned(),
         canonical_slug: format!("{PROVIDER_ID}/{id}"),
