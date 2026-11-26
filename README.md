@@ -30,3 +30,67 @@ Install it with:
 ```text
 norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-models-dev
 ```
+
+## Codex
+
+`catalog-plugin-codex` reads the ChatGPT access token and account ID from
+`$CODEX_HOME/auth.json` (or `~/.codex/auth.json`) and fetches the current model
+catalogue from Codex's `https://chatgpt.com/backend-api/codex/models` endpoint
+when the Norte Code service loads the plugin. It uses the Codex client version
+from `models_cache.json`, falling back to `codex --version`, then includes only
+models marked visible and supported by the API. The catalogue is account-aware
+and is not copied into Norte Code's editable model files.
+
+The endpoint is part of Codex's own backend and is not a documented public
+catalogue API. Codex itself uses it, and the plugin follows the same response
+shape, but OpenAI may change it without notice. The current ChatGPT access
+token must be valid when Norte Code loads the plugin.
+
+Install it with:
+
+```text
+norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-codex
+```
+
+## OpenAI
+
+`catalog-plugin-openai` reads the account-scoped model list from the official
+`/v1/models` API using `OPENAI_API_KEY`. It keeps organization-owned model IDs
+and excludes endpoint families that cannot be used with Norte Code's Chat
+Completions wire, such as embeddings, image generation, audio, transcription,
+and moderation. The API publishes model IDs and shutdown dates, but not model
+capabilities or token limits, so the plugin does not claim image input,
+reasoning, or context limits. Its 15-minute cache is scoped to a fingerprint of
+the API key and never stores the key itself.
+
+```text
+norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-openai
+```
+
+## Google Gemini
+
+`catalog-plugin-google` reads the Gemini API model list using `GOOGLE_API_KEY`
+or `GEMINI_API_KEY`, follows `nextPageToken`, and keeps only models supporting
+`generateContent`. It uses each model's `baseModelId` for requests and maps the
+published token limits and `thinking` flag. The wire base is
+`https://generativelanguage.googleapis.com/v1beta`. Its 15-minute cache is
+scoped to a fingerprint of the API key and never stores the key itself.
+
+```text
+norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-google
+```
+
+## Anthropic
+
+`catalog-plugin-anthropic` reads the Anthropic Models API using
+`ANTHROPIC_API_KEY`, follows the `last_id` cursor, and excludes models marked
+retired. It maps lifecycle, token limits, image and PDF input, structured
+outputs, thinking, and reasoning efforts from the API's capability metadata.
+Set `ANTHROPIC_WORKSPACE_ID` for an API key that is not scoped to one workspace;
+the plugin includes it in both catalogue requests and the provider wire. Its
+15-minute cache is scoped to a fingerprint of the API key and workspace, and
+never stores either value.
+
+```text
+norte-code plugins add https://github.com/JeanVydes/catalog-plugin --package catalog-plugin-anthropic
+```

@@ -1,6 +1,13 @@
 [workspace]
 resolver = "3"
-members = ["openrouter", "models-dev", "codex", "anthropic", "opencode", "claude", "openai", "google"]
+members = [
+    "openrouter",
+    "models-dev",
+    "codex",
+    "anthropic",
+    "openai",
+    "google",
+]
 
 [workspace.package]
 edition = "2024"
@@ -8,7 +15,6 @@ rust-version = "1.88"
 license = "MIT"
 
 [workspace.dependencies]
-norte-code-protocol = { git = "https://github.com/JeanVydes/NorteCode.git", branch = "dev" }
 norte-code-wire = { git = "https://github.com/JeanVydes/NorteCode.git", branch = "dev" }
 norte-code-plugin-host = { git = "https://github.com/JeanVydes/NorteCode.git", branch = "dev" }
 reqwest = { version = "0.12", default-features = false, features = ["blocking", "rustls-tls"] }

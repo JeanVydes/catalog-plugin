@@ -1,25 +1,17 @@
 //! `OpenAI` provider plugin for Norte Code.
-//!
-//! This plugin fetches the `OpenAI` model list at startup and exposes
-//! it through the host's catalogue. It reads `OPENAI_API_KEY` from the
-//! environment and uses `Authorization: Bearer`. A missing or invalid key,
-//! or any failure from the endpoint, yields an empty catalogue silently —
-//! the person will get the ordinary missing-key error when they pick a
-//! model, not a half-broken list.
-//!
-//! The catalogue refreshes every 15 minutes; it is a startup read, not a
-//! per-request one.
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, hash_map::DefaultHasher};
+use std::fmt;
+use std::hash::{Hash, Hasher};
 use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use norte_code_wire::catalog::{
-    Limit, Modalities, Modality, Model, Provider, Reasoning, SupportedParams, Wire,
+    Limit, Modalities, Modality, Model, ModelStatus, Provider, Reasoning, SupportedParams, Wire,
     WireSchema,
 };
-use norte_code_plugin_host::plugins::{Catalogue, PLUGIN_ABI_VERSION, Plugin};
 use serde::{Deserialize, Serialize};
 
 const MODELS_URL: &str = "https://api.openai.com/v1/models";
@@ -29,7 +21,22 @@ const CACHE_FILE: &str = "openai-models.json";
 
 #[derive(Default)]
 struct OpenAiPlugin {
-    catalogue: OnceLock<Catalogue>,
+    state: OnceLock<PluginState>,
+}
+
+impl OpenAiPlugin {
+    fn state(&self) -> &PluginState {
+        self.state.get_or_init(|| match fetch_catalogue() {
+            Ok(catalogue) => PluginState {
+                catalogue,
+                status: None,
+            },
+            Err(error) => PluginState {
+                catalogue: Catalogue::default(),
+                status: Some(error.to_string()),
+            },
+        })
+    }
 }
 
 impl Plugin for OpenAiPlugin {
@@ -38,8 +45,17 @@ impl Plugin for OpenAiPlugin {
     }
 
     fn catalogue(&self) -> Catalogue {
-        self.catalogue.get_or_init(fetch_catalogue).clone()
+        self.state().catalogue.clone()
     }
+
+    fn status(&self) -> Option<String> {
+        self.state().status.clone()
+    }
+}
+
+struct PluginState {
+    catalogue: Catalogue,
+    status: Option<String>,
 }
 
 /// Exports the plugin interface version expected by Norte Code.
@@ -55,53 +71,90 @@ pub extern "C" fn create_plugin() -> *mut dyn Plugin {
     Box::into_raw(Box::new(OpenAiPlugin::default()))
 }
 
-fn fetch_catalogue() -> Catalogue {
+fn fetch_catalogue() -> Result<Catalogue, CatalogError> {
+    let api_key = std::env::var("OPENAI_API_KEY")
+        .ok()
+        .filter(|key| !key.trim().is_empty())
+        .ok_or(CatalogError::MissingApiKey)?;
     let now = unix_now();
-    let path = cache_path();
-    let payload: Option<OpenAiModelsResponse> = path
+    let cache_path = cache_path(&api_key);
+    let payload = cache_path
         .as_deref()
         .and_then(|path| read_cache(path, now))
-        .or_else(|| {
-            let response = reqwest::blocking::Client::builder()
-                .timeout(Duration::from_secs(20))
-                .user_agent("norte-code-catalog-plugin-openai/0.1")
-                .build()
-                .and_then(|client| {
-                    client
-                        .get(MODELS_URL)
-                        .header(
-                            "Authorization",
-                            format!("Bearer {}", std::env::var("OPENAI_API_KEY").unwrap_or_default()),
-                        )
-                        .send()
-                })
-                .ok()?;
-            let payload = response.json::<OpenAiModelsResponse>().ok()?;
-            if let Some(path) = path.as_deref() {
-                write_cache(path, now, &payload);
-            }
-            Some(payload)
-        });
-    let Some(payload) = payload else {
-        return Catalogue::default();
-    };
+        .map_or_else(|| fetch_models(&api_key, cache_path.as_deref(), now), Ok)?;
+
     let models = payload
         .data
         .into_iter()
-        .filter(|model| model.owned_by == "openai")
+        .filter(is_chat_model)
         .map(model)
+        .map(|model| (model.id.clone(), model))
+        .collect::<BTreeMap<_, _>>()
+        .into_values()
         .collect();
-    Catalogue {
+    Ok(Catalogue {
         providers: BTreeMap::from([(PROVIDER_ID.to_owned(), provider())]),
         models,
-    }
+    })
 }
 
-fn cache_path() -> Option<PathBuf> {
-    std::env::var_os("XDG_CACHE_HOME")
+fn fetch_models(
+    api_key: &str,
+    cache_path: Option<&Path>,
+    now: u64,
+) -> Result<OpenAiModelsResponse, CatalogError> {
+    let client = reqwest::blocking::Client::builder()
+        .timeout(Duration::from_secs(20))
+        .user_agent("norte-code-catalog-plugin-openai/0.1")
+        .build()?;
+    let payload = client
+        .get(MODELS_URL)
+        .bearer_auth(api_key)
+        .send()?
+        .error_for_status()?
+        .json::<OpenAiModelsResponse>()?;
+    if let Some(path) = cache_path {
+        write_cache(path, now, &payload);
+    }
+    Ok(payload)
+}
+
+fn is_chat_model(source: &OpenAiModel) -> bool {
+    let id = source.id.to_ascii_lowercase();
+    ![
+        "embedding",
+        "davinci-",
+        "babbage-",
+        "instruct",
+        "code-",
+        "whisper",
+        "tts-",
+        "-tts",
+        "transcribe",
+        "audio",
+        "realtime",
+        "deep-research",
+        "computer-use",
+        "dall-e",
+        "gpt-image",
+        "moderation",
+        "sora",
+    ]
+    .iter()
+    .any(|unsupported_family| id.contains(unsupported_family))
+}
+
+fn cache_path(api_key: &str) -> Option<PathBuf> {
+    let cache_root = std::env::var_os("XDG_CACHE_HOME")
         .map(PathBuf::from)
-        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))
-        .map(|cache| cache.join("norte-code").join("plugins").join(CACHE_FILE))
+        .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".cache")))?;
+    let mut hasher = DefaultHasher::new();
+    api_key.hash(&mut hasher);
+    Some(cache_root.join("norte-code").join("plugins").join(format!(
+        "{}-{:016x}",
+        CACHE_FILE,
+        hasher.finish()
+    )))
 }
 
 fn unix_now() -> u64 {
@@ -148,7 +201,9 @@ struct OpenAiModelsResponse {
 struct OpenAiModel {
     id: String,
     #[serde(default)]
-    owned_by: String,
+    owned_by: Option<String>,
+    #[serde(default)]
+    shutdown_date: Option<String>,
 }
 
 fn provider() -> Provider {
@@ -171,32 +226,50 @@ fn model(source: OpenAiModel) -> Model {
         id: id.clone(),
         provider_id: PROVIDER_ID.to_owned(),
         canonical_slug: format!("{PROVIDER_ID}/{id}"),
-        name: id.clone(),
+        name: id,
         description: None,
         family: None,
+        reasoning: Reasoning::default(),
         knowledge: None,
         release_date: None,
         last_updated: None,
-        reasoning: Reasoning {
-            mandatory: false,
-            default_enabled: true,
-            default_effort: None,
-            supported_efforts: Vec::new(),
-            budget_supported: false,
-        },
         modalities: Modalities {
-            input: vec![Modality::Text, Modality::Image],
+            input: vec![Modality::Text],
             output: vec![Modality::Text],
         },
         open_weights: false,
         limit: Limit::default(),
-        status: None,
+        status: source.shutdown_date.map(|_| ModelStatus::Deprecated),
         supported_params: vec![
             SupportedParams::Tools,
             SupportedParams::ToolChoice,
-            SupportedParams::StructuredOutput,
-            SupportedParams::Reasoning,
+            SupportedParams::MaxTokens,
         ],
         pricing: None,
     }
 }
+
+#[derive(Debug)]
+enum CatalogError {
+    MissingApiKey,
+    Request(reqwest::Error),
+}
+
+impl From<reqwest::Error> for CatalogError {
+    fn from(error: reqwest::Error) -> Self {
+        Self::Request(error)
+    }
+}
+
+impl fmt::Display for CatalogError {
+    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::MissingApiKey => formatter.write_str("OPENAI_API_KEY is not set"),
+            Self::Request(error) => write!(formatter, "OpenAI model listing failed: {error}"),
+        }
+    }
+}
+
+#[cfg(test)]
+#[path = "tests.rs"]
+mod tests;
